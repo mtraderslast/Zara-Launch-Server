@@ -89,3 +89,5 @@ export const createProductSchema = z.object({
         .array(variantSchema)
         .default([]),
 });
+
+export const updateProductSchema = createProductSchema.partial();
