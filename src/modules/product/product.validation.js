@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const variantSchema = z.object({
-    attributes: z.record(z.string(), z.string()).optional(),
+    attributes: z.record(z.string(), z.string()),
 
     price: z
         .number()
