@@ -47,3 +47,82 @@ export const createReview = catchAsync(async (req, res) => {
         data: newReview,
     });
 });
+
+export const getProductReviews = catchAsync(async (req, res) => {
+    const { productId } = req.params;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+        throw new AppError(404, "Product not found");
+    }
+
+    const reviews = await Review.find({ productId }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        message: "Product reviews fetched successfully",
+        data: reviews,
+    });
+});
+
+export const editProductReview = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user?.id;
+
+    const review = await Review.findById(id);
+    if (!review) {
+        throw new AppError(404, "Review not found");
+    }
+
+    if (review.userId.toString() !== userId) {
+        throw new AppError(403, "You are not authorized to edit this review");
+    }
+
+    if (rating) review.rating = Number(rating);
+    if (comment) review.comment = comment;
+
+    const updatedReview = await review.save();
+
+    res.status(200).json({
+        success: true,
+        message: "Review updated successfully",
+        data: updatedReview,
+    });
+});
+
+export const deleteReview = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    const review = await Review.findById(id);
+    if (!review) {
+        throw new AppError(404, "Review not found");
+    }
+
+    const isOwner = review.userId.toString() === userId;
+    const isAdmin = userRole === "admin";
+
+    if (!isOwner && !isAdmin) {
+        throw new AppError(403, "You are not authorized to delete this review");
+    }
+
+    await Review.findByIdAndDelete(id);
+
+    res.status(200).json({
+        success: true,
+        message: "Review deleted successfully",
+        data: null,
+    });
+});
+
+export const getHomeTopReviews = catchAsync(async (req, res) => {
+    const reviews = await Review.find().sort({ createdAt: 1 }).limit(8);
+
+    res.status(200).json({
+        success: true,
+        message: "Home top reviews fetched successfully",
+        data: reviews,
+    });
+});
