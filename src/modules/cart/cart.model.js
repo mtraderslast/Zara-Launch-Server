@@ -13,10 +13,6 @@ const orderItemSchema = new Schema(
             required: [true, "Quantity is required"],
             min: [1, "Quantity must be at least 1"],
         },
-        price: {
-            type: Number,
-            required: [true, "Price is required"],
-        },
     },
     { _id: false }
 );
@@ -67,7 +63,6 @@ const orderSchema = new Schema(
         versionKey: false,
     }
 );
-
 
 const Order = mongoose.model("Order", orderSchema);
 export default Order;
