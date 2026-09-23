@@ -17,26 +17,38 @@ export const createReview = catchAsync(async (req, res) => {
         throw new AppError(404, "Product not found");
     }
 
-    const user = await mongoose.connection.collection("user").findOne({
-        _id: new mongoose.Types.ObjectId(userId),
-    });
-
-    if (!user) {
-        throw new AppError(404, "User profile not found");
-    }
-
     const existingReview = await Review.findOne({ productId, userId });
-
     if (existingReview) {
         throw new AppError(400, "You have already submitted a review for this product");
+    }
+
+    // req.user-এ ডাটা না থাকলে কালেকশন থেকে ফেচ (Better Auth兼容)
+    let userName = req.user?.name;
+    let userEmail = req.user?.email;
+    let userImage = req.user?.image || "";
+
+    if (!userName || !userEmail) {
+        const queryId = mongoose.Types.ObjectId.isValid(userId)
+            ? new mongoose.Types.ObjectId(userId)
+            : userId;
+
+        const user = await mongoose.connection.collection("user").findOne({ _id: queryId });
+
+        if (!user) {
+            throw new AppError(404, "User profile not found");
+        }
+
+        userName = user.name || "Anonymous";
+        userEmail = user.email;
+        userImage = user.image || "";
     }
 
     const newReview = await Review.create({
         productId,
         userId,
-        userName: user.name || "Anonymous",
-        userEmail: user.email,
-        userImage: user.image || "",
+        userName,
+        userEmail,
+        userImage,
         rating: Number(rating),
         comment,
     });
@@ -75,12 +87,12 @@ export const editProductReview = catchAsync(async (req, res) => {
         throw new AppError(404, "Review not found");
     }
 
-    if (review.userId.toString() !== userId) {
+    if (review.userId !== userId) {
         throw new AppError(403, "You are not authorized to edit this review");
     }
 
-    if (rating) review.rating = Number(rating);
-    if (comment) review.comment = comment;
+    if (rating !== undefined) review.rating = Number(rating);
+    if (comment !== undefined) review.comment = comment;
 
     const updatedReview = await review.save();
 
@@ -101,7 +113,7 @@ export const deleteReview = catchAsync(async (req, res) => {
         throw new AppError(404, "Review not found");
     }
 
-    const isOwner = review.userId.toString() === userId;
+    const isOwner = review.userId === userId;
     const isAdmin = userRole === "admin";
 
     if (!isOwner && !isAdmin) {
@@ -118,7 +130,9 @@ export const deleteReview = catchAsync(async (req, res) => {
 });
 
 export const getHomeTopReviews = catchAsync(async (req, res) => {
-    const reviews = await Review.find().sort({ createdAt: 1 }).limit(8);
+    const reviews = await Review.find()
+        .sort({ rating: -1, createdAt: -1 })
+        .limit(8);
 
     res.status(200).json({
         success: true,

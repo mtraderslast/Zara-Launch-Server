@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const reviewSchema = new mongoose.Schema(
+const reviewSchema = new Schema(
     {
         productId: {
             type: Schema.Types.ObjectId,
@@ -17,7 +17,7 @@ const reviewSchema = new mongoose.Schema(
         },
         userEmail: {
             type: String,
-            required: [true, "User email is required"], 
+            required: [true, "User email is required"],
         },
         userImage: {
             type: String,
@@ -32,6 +32,7 @@ const reviewSchema = new mongoose.Schema(
         comment: {
             type: String,
             required: [true, "Comment is required"],
+            trim: true,
         },
     },
     {
@@ -39,6 +40,8 @@ const reviewSchema = new mongoose.Schema(
         versionKey: false,
     }
 );
+
+reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
 
 const Review = mongoose.model("Review", reviewSchema);
 export default Review;
