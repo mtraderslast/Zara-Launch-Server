@@ -1,7 +1,11 @@
 import { z } from "zod";
 
-export const createFavoriteValidationSchema = z.object({
-    productId: z.string({
-        required_error: "Product ID is required",
+export const favoriteValidationSchema = z.object({
+    body: z.object({
+        productId: z
+            .string({
+                required_error: "Product ID is required",
+            })
+            .min(1, "Product ID cannot be empty"),
     }),
 });

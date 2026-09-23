@@ -3,9 +3,9 @@ import mongoose, { Schema } from "mongoose";
 const favoriteSchema = new Schema(
     {
         userId: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
+            type: String,
             required: [true, "User ID is required"],
+            index: true,
         },
         productId: {
             type: Schema.Types.ObjectId,
