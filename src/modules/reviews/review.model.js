@@ -8,8 +8,7 @@ const reviewSchema = new mongoose.Schema(
             required: [true, "Product id is required"],
         },
         userId: {
-            type: String, 
-            ref: "User",
+            type: String,
             required: [true, "User id is required"],
         },
         userName: {
