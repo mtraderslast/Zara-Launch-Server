@@ -1,129 +1,118 @@
 import mongoose from "mongoose";
 
+const variantSchema = new mongoose.Schema(
+    {
+        attributes: {
+            type: Map,
+            of: String,
+            default: {},
+        },
+        price: {
+            type: Number,
+            min: [0, "Variant price cannot be negative"],
+        },
+        stock: {
+            type: Number,
+            default: 0,
+            min: [0, "Stock cannot be negative"],
+        },
+        sku: {
+            type: String,
+            trim: true,
+        },
+    },
+    { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
     {
-        // Basic Information
         titleBn: {
             type: String,
-            required: true,
+            required: [true, "Bangla title is required"],
             trim: true,
         },
-
         titleEn: {
             type: String,
-            required: true,
+            required: [true, "English title is required"],
             trim: true,
         },
-
         slug: {
             type: String,
-            required: true,
+            required: [true, "Slug is required"],
             unique: true,
             lowercase: true,
             trim: true,
         },
-
         descriptionBn: {
             type: String,
-            required: true,
+            required: [true, "Bangla description is required"],
             trim: true,
         },
-
-        // Category
         category: {
             type: String,
-            required: true,
+            required: [true, "Category is required"],
             trim: true,
+            index: true,
         },
-
         subCategory: {
             type: String,
             trim: true,
+            index: true,
         },
-
         brand: {
             type: String,
             trim: true,
+            index: true,
         },
-
-        // Pricing
         price: {
             type: Number,
-            required: true,
-            min: 0,
+            required: [true, "Price is required"],
+            min: [0, "Price cannot be negative"],
         },
-
         discountRate: {
             type: Number,
             default: 0,
-            min: 0,
-            max: 100,
+            min: [0, "Discount cannot be negative"],
+            max: [100, "Discount cannot exceed 100"],
         },
-
-        // Images
-        images: [
-            {
-                type: String,
-                required: true,
+        images: {
+            type: [String],
+            validate: {
+                validator: (v) => Array.isArray(v) && v.length > 0,
+                message: "At least one product image is required",
             },
-        ],
-
-        // Product Management
+        },
         isFeatured: {
             type: Boolean,
             default: false,
+            index: true,
         },
-
         status: {
             type: String,
             enum: ["active", "draft"],
             default: "active",
+            index: true,
         },
-
-        tags: [
-            {
-                type: String,
-                trim: true,
-            },
-        ],
-
-        // Variants
+        tags: {
+            type: [String],
+            default: [],
+        },
         hasVariants: {
             type: Boolean,
             default: false,
         },
-
-        variants: [
-            {
-                attributes: {
-                    type: Map,
-                    of: String,
-                },
-
-                price: {
-                    type: Number,
-                    min: 0,
-                },
-
-                stock: {
-                    type: Number,
-                    default: 0,
-                    min: 0,
-                },
-
-                sku: {
-                    type: String,
-                    trim: true,
-                },
-            },
-        ],
+        variants: {
+            type: [variantSchema],
+            default: [],
+        },
     },
     {
         timestamps: true,
-        versionKey: false
+        versionKey: false,
     }
 );
 
-const Product = mongoose.model("Product", productSchema);
+productSchema.index({ titleEn: "text", titleBn: "text", tags: "text" });
 
+const Product = mongoose.model("Product", productSchema);
 export default Product;

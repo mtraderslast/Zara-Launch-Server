@@ -1,17 +1,37 @@
 import express from "express";
+import { createProduct, deleteProduct, getAllProducts, getProductDetails, updateProduct } from "./product.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 import protectRoute from "../../middleware/protectRoute.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { createProductSchema, updateProductSchema } from "./product.validation.js";
 import { ROLES } from "../../utils/roles.js";
-import { createProduct, deleteProduct, getProductDetails, updateProduct } from "./product.controller.js";
-
 
 const router = express.Router();
 
-router.get("/", );
-router.post("/create-product", createProduct);
-router.get("/:slug", getProductDetails);
-router.patch("/:slug", verifyToken, protectRoute(ROLES.ADMIN), updateProduct);
-router.delete("/:slug", verifyToken, protectRoute(ROLES.ADMIN), deleteProduct);
+router.get("/", getAllProducts);
+router.get("/:id", getProductDetails);
 
+router.post(
+    "/",
+    verifyToken,
+    protectRoute(ROLES.ADMIN),
+    validateRequest(createProductSchema),
+    createProduct
+);
+
+router.patch(
+    "/:id",
+    verifyToken,
+    protectRoute(ROLES.ADMIN),
+    validateRequest(updateProductSchema),
+    updateProduct
+);
+
+router.delete(
+    "/:id",
+    verifyToken,
+    protectRoute(ROLES.ADMIN),
+    deleteProduct
+);
 
 export default router;
