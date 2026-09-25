@@ -1,14 +1,17 @@
 import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
 import Product from "./product.model.js";
+import { createProductSchema } from "./product.validation.js";
 
 export const createProduct = catchAsync(async (req, res) => {
-    const existingProduct = await Product.findOne({ slug: req.body.slug });
+    const validatedData = await createProductSchema.parseAsync(req.body);
+
+    const existingProduct = await Product.findOne({ slug: validatedData.slug });
     if (existingProduct) {
         throw new AppError(400, "A product with this slug already exists");
     }
 
-    const newProduct = await Product.create(req.body);
+    const newProduct = await Product.create(validatedData);
 
     res.status(201).json({
         success: true,

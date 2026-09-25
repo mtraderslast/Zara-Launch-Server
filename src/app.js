@@ -24,11 +24,11 @@ const createApp = (auth) => {
 
     app.all("/api/auth/*splat", toNodeHandler(auth));
 
-    app.use("/product", ProductRoute);
-    app.use("/combo", ComboRoute);
-    app.use("/order", OrderRoute);
-    app.use("/favorite", FavoriteRoute);
-    app.use("/reviews", ReviewsRoute);
+    app.use("/api/product", ProductRoute);
+    app.use("/api/combo", ComboRoute);
+    app.use("/api/order", OrderRoute);
+    app.use("/api/favorite", FavoriteRoute);
+    app.use("/api/reviews", ReviewsRoute);
 
     app.get("/", (req, res) => {
         res.send("M traders server is running successfully");
