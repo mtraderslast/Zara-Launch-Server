@@ -1,15 +1,17 @@
 import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
 import Combo from "./combo.model.js";
-
+import { createComboSchema } from "./combo.validation.js";
 
 export const createCombo = catchAsync(async (req, res) => {
-    const existingCombo = await Combo.findOne({ slug: req.body.slug });
+    const validatedData = await createComboSchema.parseAsync(req.body);
+
+    const existingCombo = await Combo.findOne({ slug: validatedData.slug });
     if (existingCombo) {
         throw new AppError(400, "A combo package with this slug already exists");
     }
 
-    const combo = await Combo.create(req.body);
+    const combo = await Combo.create(validatedData);
 
     res.status(201).json({
         success: true,

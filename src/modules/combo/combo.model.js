@@ -73,17 +73,17 @@ const comboSchema = new Schema(
         originalPrice: {
             type: Number,
             required: [true, "Original total price is required"],
-            min: 0,
+            min: [0, "Original price cannot be negative"],
         },
         comboPrice: {
             type: Number,
             required: [true, "Combo special price is required"],
-            min: 0,
+            min: [0, "Combo price cannot be negative"],
         },
         stock: {
             type: Number,
             required: [true, "Stock quantity is required"],
-            min: 0,
+            min: [0, "Stock cannot be negative"],
             default: 0,
         },
         isActive: {
