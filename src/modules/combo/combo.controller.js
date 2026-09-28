@@ -1,3 +1,4 @@
+// backend/controllers/combo.controller.js
 import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
 import Combo from "./combo.model.js";
@@ -21,12 +22,20 @@ export const createCombo = catchAsync(async (req, res) => {
 });
 
 export const getActiveCombos = catchAsync(async (req, res) => {
-    const combos = await Combo.find({ isActive: true })
+    const { limit } = req.query;
+
+    let query = Combo.find({ isActive: true })
         .populate({
             path: "products.productId",
             select: "titleEn titleBn price images status slug",
         })
         .sort({ createdAt: -1 });
+
+    if (limit) {
+        query = query.limit(Number(limit));
+    }
+
+    const combos = await query;
 
     res.status(200).json({
         success: true,
@@ -54,7 +63,7 @@ export const getComboBySlug = catchAsync(async (req, res) => {
     });
 });
 
-export const getAllCombosForAdmin = catchAsync(async (req, res) => {
+export const getAllCombos = catchAsync(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -62,7 +71,7 @@ export const getAllCombosForAdmin = catchAsync(async (req, res) => {
         Combo.find()
             .populate({
                 path: "products.productId",
-                select: "titleEn price images",
+                select: "titleEn titleBn price images",
             })
             .sort({ createdAt: -1 })
             .skip(skip)
