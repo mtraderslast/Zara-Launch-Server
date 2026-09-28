@@ -21,25 +21,51 @@ export const createProduct = catchAsync(async (req, res) => {
 });
 
 export const getAllProducts = catchAsync(async (req, res) => {
-    const { category, brand, isFeatured, search, page = 1, limit = 10 } = req.query;
+    const {
+        category,
+        subCategory,
+        brand,
+        isFeatured,
+        search,
+        minPrice,
+        maxPrice,
+        sortBy = "newest",
+        page = 1,
+        limit = 12,
+    } = req.query;
 
     const query = { status: "active" };
 
-    if (category) query.category = category;
+    if (category && category !== "ALL") query.category = category;
+    if (subCategory && subCategory !== "ALL") query.subCategory = subCategory;
     if (brand) query.brand = brand;
     if (isFeatured !== undefined) query.isFeatured = isFeatured === "true";
-    if (search) {
+
+    if (search && search.trim() !== "") {
         query.$or = [
-            { titleEn: { $regex: search, $options: "i" } },
-            { titleBn: { $regex: search, $options: "i" } },
-            { tags: { $regex: search, $options: "i" } },
+            { titleEn: { $regex: search.trim(), $options: "i" } },
+            { titleBn: { $regex: search.trim(), $options: "i" } },
+            { tags: { $regex: search.trim(), $options: "i" } },
         ];
+    }
+
+    if (minPrice || maxPrice) {
+        query.price = {};
+        if (minPrice) query.price.$gte = Number(minPrice);
+        if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    let sortOptions = { createdAt: -1 };
+    if (sortBy === "price_low_high") {
+        sortOptions = { price: 1 };
+    } else if (sortBy === "price_high_low") {
+        sortOptions = { price: -1 };
     }
 
     const skip = (Number(page) - 1) * Number(limit);
 
     const [products, total] = await Promise.all([
-        Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+        Product.find(query).sort(sortOptions).skip(skip).limit(Number(limit)),
         Product.countDocuments(query),
     ]);
 
