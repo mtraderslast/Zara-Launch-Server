@@ -93,6 +93,15 @@ export const createOrder = catchAsync(async (req, res) => {
 
             itemsSubtotal += finalUnitPrice * item.quantity;
 
+            const variantAttributes = variant?.attributes
+                ? Object.fromEntries(
+                    variant.attributes instanceof Map ? variant.attributes : Object.entries(variant.attributes)
+                )
+                : {};
+            const variantLabel = Object.entries(variantAttributes)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(", ");
+
             verifiedOrderItems.push({
                 productId: product._id,
                 itemType: "product",
@@ -101,11 +110,9 @@ export const createOrder = catchAsync(async (req, res) => {
                 price: finalUnitPrice,
                 quantity: item.quantity,
                 variantSku: variant?.sku || null,
-                variantAttributes: variant?.attributes
-                    ? Object.fromEntries(
-                        variant.attributes instanceof Map ? variant.attributes : Object.entries(variant.attributes)
-                    )
-                    : {},
+                variantAttributes,
+                variantLabel,
+                productSlug: product.slug,
             });
         }
     }
