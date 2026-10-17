@@ -39,6 +39,17 @@ const orderItemSchema = new Schema(
             of: String,
             default: {},
         },
+        // অর্ডারের সময়কার পড়ার উপযোগী লেখা (যেমন "Color: Black, Size: 52") — পরে প্রোডাক্টের ভ্যারিয়েন্ট বদলালেও অর্ডারে সঠিক তথ্য থাকবে
+        variantLabel: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        productSlug: {
+            type: String,
+            trim: true,
+            default: "",
+        },
     },
     { _id: false }
 );
