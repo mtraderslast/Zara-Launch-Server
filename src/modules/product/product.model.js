@@ -11,6 +11,11 @@ const variantSchema = new mongoose.Schema(
             type: Number,
             min: [0, "Variant price cannot be negative"],
         },
+        discountPrice: {
+            type: Number,
+            min: [0, "Variant discount price cannot be negative"],
+            default: null,
+        },
         stock: {
             type: Number,
             default: 0,
@@ -70,11 +75,18 @@ const productSchema = new mongoose.Schema(
             required: [true, "Price is required"],
             min: [0, "Price cannot be negative"],
         },
-        discountRate: {
+        // ডিসকাউন্ট দাম (ঐচ্ছিক)। থাকলে অবশ্যই মূল দামের (price) চেয়ে কম হতে হবে।
+        discountPrice: {
             type: Number,
-            default: 0,
-            min: [0, "Discount cannot be negative"],
-            max: [100, "Discount cannot exceed 100"],
+            default: null,
+            min: [0, "Discount price cannot be negative"],
+            validate: {
+                validator: function (value) {
+                    if (value === null || value === undefined || value === 0) return true;
+                    return typeof this.price !== "number" || value < this.price;
+                },
+                message: "Discount price must be less than the original price",
+            },
         },
         images: {
             type: [String],

@@ -1,7 +1,8 @@
 import AppError from "../../utils/AppError.js";
 import catchAsync from "../../utils/catchAsync.js";
+import { CATEGORY_VALUES, isValidSubCategory } from "../../utils/categories.js";
 import Product from "./product.model.js";
-import { createProductSchema } from "./product.validation.js";
+import { createProductSchema, updateProductSchema } from "./product.validation.js";
 
 export const createProduct = catchAsync(async (req, res) => {
     const validatedData = await createProductSchema.parseAsync(req.body);
@@ -69,10 +70,12 @@ export const getAllProducts = catchAsync(async (req, res) => {
         sortOptions = { price: -1 };
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
+    const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+    const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 12));
+    const skip = (pageNumber - 1) * limitNumber;
 
     const [products, total] = await Promise.all([
-        Product.find(query).sort(sortOptions).skip(skip).limit(Number(limit)),
+        Product.find(query).sort(sortOptions).skip(skip).limit(limitNumber),
         Product.countDocuments(query),
     ]);
 
@@ -80,12 +83,39 @@ export const getAllProducts = catchAsync(async (req, res) => {
         success: true,
         message: "Products fetched successfully",
         meta: {
-            page: Number(page),
-            limit: Number(limit),
+            page: pageNumber,
+            limit: limitNumber,
             total,
-            totalPages: Math.ceil(total / Number(limit)),
+            totalPages: Math.max(1, Math.ceil(total / limitNumber)),
         },
         data: products,
+    });
+});
+
+// হোম পেজের ক্যাটাগরি সেকশনের জন্য: প্রতিটি ক্যাটাগরিতে কতটি অ্যাক্টিভ পণ্য আছে ও সর্বশেষ পণ্যের একটি ছবি
+export const getCategorySummary = catchAsync(async (req, res) => {
+    const summary = await Product.aggregate([
+        { $match: { status: "active", category: { $in: CATEGORY_VALUES } } },
+        { $sort: { isFeatured: -1, createdAt: -1 } },
+        {
+            $group: {
+                _id: "$category",
+                productCount: { $sum: 1 },
+                image: { $first: { $arrayElemAt: ["$images", 0] } },
+            },
+        },
+        { $project: { _id: 0, category: "$_id", productCount: 1, image: 1 } },
+    ]);
+
+    const byCategory = new Map(summary.map((item) => [item.category, item]));
+    const data = CATEGORY_VALUES.filter((category) => byCategory.has(category)).map((category) =>
+        byCategory.get(category)
+    );
+
+    res.status(200).json({
+        success: true,
+        message: "Category summary fetched successfully",
+        data,
     });
 });
 
@@ -122,14 +152,34 @@ export const getProductById = catchAsync(async (req, res) => {
 export const updateProduct = catchAsync(async (req, res) => {
     const { id } = req.params;
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
-        new: true,
-        runValidators: true,
-    });
+    const validatedData = await updateProductSchema.parseAsync(req.body);
 
-    if (!updatedProduct) {
+    const product = await Product.findById(id);
+    if (!product) {
         throw new AppError(404, "Product not found");
     }
+
+    if (validatedData.slug && validatedData.slug !== product.slug) {
+        const slugTaken = await Product.exists({ slug: validatedData.slug, _id: { $ne: id } });
+        if (slugTaken) {
+            throw new AppError(400, "A product with this slug already exists");
+        }
+    }
+
+    // undefined মান বাদ দিয়ে শুধু পাঠানো ফিল্ডগুলো সেট করা হচ্ছে
+    const updates = Object.fromEntries(
+        Object.entries(validatedData).filter(([, value]) => value !== undefined)
+    );
+
+    const nextCategory = updates.category ?? product.category;
+    const nextSubCategory = updates.subCategory ?? product.subCategory;
+    if (!isValidSubCategory(nextCategory, nextSubCategory)) {
+        throw new AppError(400, "Sub-category does not belong to the selected category");
+    }
+
+    // save() ব্যবহার করা হয়েছে যাতে মডেলের ভ্যালিডেটর (যেমন discountPrice < price) সঠিকভাবে চলে
+    product.set(updates);
+    const updatedProduct = await product.save();
 
     res.status(200).json({
         success: true,

@@ -55,7 +55,7 @@ export const getMyFavorites = catchAsync(async (req, res) => {
     }
 
     const rawFavorites = await Favorite.find({ userId })
-        .populate("productId", "titleEn titleBn price discountRate images status slug")
+        .populate("productId", "titleEn titleBn price discountPrice images status slug")
         .sort({ createdAt: -1 });
 
     const activeFavorites = rawFavorites.filter((fav) => fav.productId !== null);

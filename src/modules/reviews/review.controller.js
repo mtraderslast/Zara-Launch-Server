@@ -141,13 +141,24 @@ export const deleteReview = catchAsync(async (req, res) => {
 });
 
 export const getHomeTopReviews = catchAsync(async (req, res) => {
-    const reviews = await Review.find()
-        .sort({ rating: -1, createdAt: -1 })
-        .limit(8);
+    const [reviews, stats] = await Promise.all([
+        Review.find({ rating: { $gte: 4 } })
+            .select("-userEmail -userId")
+            .sort({ rating: -1, createdAt: -1 })
+            .limit(8)
+            .populate("productId", "titleBn titleEn slug images"),
+        Review.aggregate([
+            { $group: { _id: null, averageRating: { $avg: "$rating" }, totalReviews: { $sum: 1 } } },
+        ]),
+    ]);
 
     res.status(200).json({
         success: true,
         message: "Home top reviews fetched successfully",
+        meta: {
+            averageRating: stats[0] ? Math.round(stats[0].averageRating * 10) / 10 : 0,
+            totalReviews: stats[0]?.totalReviews || 0,
+        },
         data: reviews,
     });
 });
