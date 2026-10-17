@@ -33,6 +33,12 @@ const orderItemSchema = new Schema(
             trim: true,
             default: null,
         },
+        // কোন ভ্যারিয়েন্ট অর্ডার হয়েছে (যেমন { Size: "42" }) — SKU না থাকলেও অ্যাডমিন বুঝতে পারবে
+        variantAttributes: {
+            type: Map,
+            of: String,
+            default: {},
+        },
     },
     { _id: false }
 );

@@ -18,6 +18,7 @@ export const createOrderSchema = z.object({
                     .int("Quantity must be a whole number")
                     .min(1, "Quantity must be at least 1"),
                 variantSku: z.string().nullable().optional(),
+                attributes: z.record(z.string(), z.string()).nullable().optional(),
             })
         )
         .min(1, "Order must contain at least one item"),

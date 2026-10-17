@@ -7,6 +7,7 @@ import ComboRoute from "./modules/combo/combo.routes.js";
 import OrderRoute from "./modules/order/order.routes.js";
 import FavoriteRoute from "./modules/favorite/favorite.routes.js";
 import ReviewsRoute from "./modules/reviews/review.route.js";
+import globalErrorHandler, { notFoundHandler } from "./utils/globalErrorHandler.js";
 
 const createApp = (auth) => {
     const app = express();
@@ -31,8 +32,12 @@ const createApp = (auth) => {
     app.use("/api/reviews", ReviewsRoute);
 
     app.get("/", (req, res) => {
-        res.send("M traders server is running successfully");
+        res.send("Zara Launch server is running successfully");
     });
+
+    // অবশ্যই সব রুটের পরে
+    app.use(notFoundHandler);
+    app.use(globalErrorHandler);
 
     return app;
 }

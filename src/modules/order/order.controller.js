@@ -5,6 +5,7 @@ import Product from "../product/product.model.js";
 import Combo from "../combo/combo.model.js";
 import Order from "./order.model.js";
 import { createOrderSchema, updateOrderStatusSchema } from "./order.validation.js";
+import { findVariant, resolveUnitPrice } from "../../utils/pricing.js";
 
 const SHIPPING_CHARGES = {
     inside_dhaka: 70,
@@ -28,14 +29,10 @@ const generateTrackingId = async () => {
 };
 
 export const createOrder = catchAsync(async (req, res) => {
-    const validationResult = createOrderSchema.safeParse(req.body);
-
-    if (!validationResult.success) {
-        const errorMessage = validationResult.error.errors[0]?.message || "Invalid input data";
-        throw new AppError(400, errorMessage);
-    }
-
-    const { orderType, name, phone, address, deliveryLocation, note, items } = validationResult.data;
+    // ভ্যালিডেশন এরর হলে ZodError থ্রো হবে, যা গ্লোবাল এরর হ্যান্ডলার 400 হিসেবে ফেরত দেবে
+    // (লগইন ছাড়াই অর্ডার করা যায় — এই রুটে কোনো verifyToken নেই)
+    const { orderType, name, phone, address, deliveryLocation, note, items } =
+        createOrderSchema.parse(req.body);
 
     let itemsSubtotal = 0;
     const verifiedOrderItems = [];
@@ -48,7 +45,8 @@ export const createOrder = catchAsync(async (req, res) => {
                 throw new AppError(404, `Combo package not found with slug: ${item.slug}`);
             }
 
-            if (combo.status && combo.status !== "active") {
+            // ইনঅ্যাকটিভ কম্বো অর্ডার করা যাবে না
+            if (!combo.isActive) {
                 throw new AppError(400, `Combo package "${combo.title}" is not available right now`);
             }
 
@@ -75,19 +73,23 @@ export const createOrder = catchAsync(async (req, res) => {
                 throw new AppError(400, `Product "${product.titleEn || product.titleBn}" is not available right now`);
             }
 
-            let basePrice = product.price || 0;
+            // ভ্যারিয়েন্ট থাকলে SKU অথবা অ্যাট্রিবিউট (যেমন Size: 42) দিয়ে সঠিক ভ্যারিয়েন্ট খোঁজা হয়
+            let variant = null;
+            if (product.hasVariants && product.variants?.length > 0) {
+                variant = findVariant(product, {
+                    sku: item.variantSku,
+                    attributes: item.attributes,
+                });
 
-            if (item.variantSku && product.hasVariants) {
-                const variant = product.variants?.find((v) => v.sku === item.variantSku);
-                if (variant && variant.price && variant.price > 0) {
-                    basePrice = variant.price;
+                if (!variant) {
+                    throw new AppError(
+                        400,
+                        `Please select a valid variant for "${product.titleEn || product.titleBn}"`
+                    );
                 }
             }
 
-            const finalUnitPrice =
-                product.discountRate > 0
-                    ? Math.round(basePrice - (basePrice * product.discountRate) / 100)
-                    : basePrice;
+            const { finalPrice: finalUnitPrice } = resolveUnitPrice(product, variant);
 
             itemsSubtotal += finalUnitPrice * item.quantity;
 
@@ -98,7 +100,12 @@ export const createOrder = catchAsync(async (req, res) => {
                 image: product.images?.[0] || "",
                 price: finalUnitPrice,
                 quantity: item.quantity,
-                variantSku: item.variantSku || null,
+                variantSku: variant?.sku || null,
+                variantAttributes: variant?.attributes
+                    ? Object.fromEntries(
+                        variant.attributes instanceof Map ? variant.attributes : Object.entries(variant.attributes)
+                    )
+                    : {},
             });
         }
     }
@@ -214,13 +221,7 @@ export const updateOrderStatus = catchAsync(async (req, res) => {
         throw new AppError(400, "Invalid Order ID format");
     }
 
-    const validationResult = updateOrderStatusSchema.safeParse(req.body);
-    if (!validationResult.success) {
-        const errorMessage = validationResult.error.errors[0]?.message || "Invalid status";
-        throw new AppError(400, errorMessage);
-    }
-
-    const { status } = validationResult.data;
+    const { status } = updateOrderStatusSchema.parse(req.body);
 
     const order = await Order.findById(id);
     if (!order) {

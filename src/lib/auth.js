@@ -6,7 +6,7 @@ export const createAuth = (db) => {
     const origins = [
         process.env.FRONTEND_URL,
         "http://localhost:3000"
-    ]
+    ].filter(Boolean);
 
     return betterAuth({
         database: mongodbAdapter(db),
@@ -43,6 +43,7 @@ export const createAuth = (db) => {
                 role: {
                     type: "string",
                     defaultValue: "user",
+                    input: false,
                 },
                 phone: {
                     type: "string",
@@ -50,7 +51,7 @@ export const createAuth = (db) => {
                 },
                 image: {
                     type: "string",
-                    default: "",
+                    defaultValue: "",
                 },
                 address: {
                     type: "string",
